@@ -86,9 +86,14 @@
         // ==========================================
         // 1. RESOURCES CONFIG Vandiep
         // ==========================================
-       <img src="giang_sinh_an_lanh/image1.jpeg.jpg">
-<audio src="giang_sinh_an_lanh/audio.mp3" controls autoplay></audio>
+        const MUSIC_URL = "audio.mp3";
+        let bgMusic = new Audio(MUSIC_URL);
+        bgMusic.loop = true; bgMusic.volume = 1.0;
 
+        const loader = new THREE.TextureLoader();
+        const photoFiles = ['image1.jpeg.jpg', 'image2.jpeg.jpg', 'image3.jpeg.jpg', 'image4.jpeg.jpg', 'image5.jpeg.jpg'];
+        const photoTextures = [];
+        photoFiles.forEach((f, i) => photoTextures[i] = loader.load(f));
 
         function createCustomTexture(type) {
             const canvas = document.createElement('canvas');
