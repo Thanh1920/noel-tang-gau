@@ -528,5 +528,72 @@
             if(camera) { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
         });
     </script>
+    <script>
+(function () {
+    const snowCanvas = document.createElement("canvas");
+    snowCanvas.id = "snow-canvas";
+    snowCanvas.style.position = "fixed";
+    snowCanvas.style.top = 0;
+    snowCanvas.style.left = 0;
+    snowCanvas.style.pointerEvents = "none";
+    snowCanvas.style.zIndex = 9999;
+    document.body.appendChild(snowCanvas);
+
+    const ctx = snowCanvas.getContext("2d");
+    let w, h;
+    function resize() {
+        w = snowCanvas.width = window.innerWidth;
+        h = snowCanvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    const snowflakes = [];
+    const COUNT = 120;
+
+    for (let i = 0; i < COUNT; i++) {
+        snowflakes.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            r: Math.random() * 3 + 1,
+            d: Math.random() + 0.5
+        });
+    }
+
+    function drawSnow() {
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.beginPath();
+        for (let i = 0; i < COUNT; i++) {
+            const f = snowflakes[i];
+            ctx.moveTo(f.x, f.y);
+            ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2, true);
+        }
+        ctx.fill();
+        moveSnow();
+    }
+
+    let angle = 0;
+    function moveSnow() {
+        angle += 0.01;
+        for (let i = 0; i < COUNT; i++) {
+            const f = snowflakes[i];
+            f.y += Math.pow(f.d, 2) + 0.5;
+            f.x += Math.sin(angle) * 0.5;
+
+            if (f.y > h) {
+                snowflakes[i] = {
+                    x: Math.random() * w,
+                    y: -10,
+                    r: f.r,
+                    d: f.d
+                };
+            }
+        }
+    }
+
+    setInterval(drawSnow, 33);
+})();
+</script>
 </body>
 </html>
