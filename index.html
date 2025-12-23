@@ -441,8 +441,9 @@
             if(camera) { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
         });
         function logError(e) { document.getElementById('error-log').style.display='block'; document.getElementById('error-log').innerText+=e+"\n"; }
-      
- <script>
+    </script>   
+<!-- ❄️ SNOW FALL EFFECT -->
+<script>
 (function () {
     const snowCanvas = document.createElement("canvas");
     snowCanvas.id = "snow-canvas";
@@ -455,6 +456,7 @@
 
     const ctx = snowCanvas.getContext("2d");
     let w, h;
+
     function resize() {
         w = snowCanvas.width = window.innerWidth;
         h = snowCanvas.height = window.innerHeight;
@@ -481,7 +483,7 @@
         for (let i = 0; i < COUNT; i++) {
             const f = snowflakes[i];
             ctx.moveTo(f.x, f.y);
-            ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2, true);
+            ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
         }
         ctx.fill();
         moveSnow();
