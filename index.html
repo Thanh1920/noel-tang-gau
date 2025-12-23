@@ -1,11 +1,9 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>🎄 Merry Christmas 🎁</title>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
 html, body {
@@ -14,204 +12,170 @@ html, body {
     overflow: hidden;
     background: black;
     touch-action: none;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont;
 }
-
-#startBtn {
-    position: absolute;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 16px 50px;
-    border-radius: 40px;
-    border: 2px solid gold;
-    background: linear-gradient(#c62828, #8b0000);
-    color: white;
-    font-size: 18px;
-    font-weight: bold;
-    cursor: pointer;
-    animation: pulse 1.5s infinite;
-    z-index: 10;
-}
-
-@keyframes pulse {
-    0% { transform: translateX(-50%) scale(1); }
-    50% { transform: translateX(-50%) scale(1.08); }
-    100% { transform: translateX(-50%) scale(1); }
-}
-
 #hint {
-    position: absolute;
-    bottom: 95px;
+    position: fixed;
+    bottom: 20px;
     width: 100%;
     text-align: center;
     color: rgba(255,255,255,0.7);
-    font-size: 13px;
+    font-size: 14px;
+    z-index: 10;
+}
+#title {
+    position: fixed;
+    top: 20px;
+    width: 100%;
+    text-align: center;
+    font-size: 26px;
+    font-weight: bold;
+    color: gold;
+    text-shadow: 0 0 20px red;
+    z-index: 10;
 }
 </style>
 </head>
 
 <body>
+<div id="title">🎄 Merry Christmas 🎄</div>
+<div id="hint">Chúc bạn một mùa Giáng Sinh ấm áp ❤️</div>
 
-<div id="hint">❄️ Chạm để bắt đầu món quà Noel ❄️</div>
-<button id="startBtn">START MAGIC 🎄</button>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
-// ================================
-// GLOBAL
-// ================================
-let scene, camera, renderer;
-let snow, magic;
-let started = false;
+let scene, camera, renderer, tree, snow;
+let width = window.innerWidth;
+let height = window.innerHeight;
 
-// ================================
-// PARTICLE TEXTURE (TRÒN - MỊN)
-// ================================
-function createParticleTexture() {
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = 64;
-    const ctx = canvas.getContext("2d");
-
+/* ====== TEXTURE TRÒN (FIX Ô VUÔNG) ====== */
+function createCircleTexture() {
+    const c = document.createElement("canvas");
+    c.width = c.height = 64;
+    const ctx = c.getContext("2d");
     const g = ctx.createRadialGradient(32,32,0,32,32,32);
-    g.addColorStop(0,"rgba(255,255,255,1)");
-    g.addColorStop(0.4,"rgba(255,255,255,0.8)");
-    g.addColorStop(1,"rgba(255,255,255,0)");
-
+    g.addColorStop(0, "rgba(255,255,255,1)");
+    g.addColorStop(0.5, "rgba(255,255,255,0.8)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = g;
     ctx.fillRect(0,0,64,64);
-
-    return new THREE.CanvasTexture(canvas);
+    return new THREE.CanvasTexture(c);
 }
 
-const particleTexture = createParticleTexture();
-
-// ================================
-// INIT
-// ================================
+/* ====== INIT ====== */
 function init() {
     scene = new THREE.Scene();
 
-    camera = new THREE.PerspectiveCamera(
-        65,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        1000
-    );
+    camera = new THREE.PerspectiveCamera(60, width/height, 0.1, 1000);
     camera.position.z = 120;
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer = new THREE.WebGLRenderer({ antialias:true });
+    renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.body.appendChild(renderer.domElement);
 
-    createSnow();
-    createMagic();
+    tree = createTree();
+    snow = createSnow();
+
     animate();
 }
 
-// ================================
-// SNOW ❄️
-// ================================
-function createSnow() {
-    const count = window.innerWidth < 768 ? 1200 : 2500;
-    const geo = new THREE.BufferGeometry();
-    const pos = [];
+/* ====== CÂY THÔNG ====== */
+function createTree() {
+    const count = 3500;
+    const pos = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
 
-    for (let i = 0; i < count; i++) {
-        pos.push(
-            (Math.random() - 0.5) * 400,
-            Math.random() * 300,
-            (Math.random() - 0.5) * 400
-        );
+    for (let i=0; i<count; i++) {
+        const y = Math.random() * 90 - 45;
+        const r = (1 - (y + 45) / 90) * 35 * Math.random();
+        const a = Math.random() * Math.PI * 2;
+
+        pos[i*3] = Math.cos(a) * r;
+        pos[i*3+1] = y;
+        pos[i*3+2] = Math.sin(a) * r;
+
+        if (Math.random() > 0.92) {
+            col[i*3] = 1;
+            col[i*3+1] = 0.85;
+            col[i*3+2] = 0.3;
+        } else {
+            col[i*3] = 0.1;
+            col[i*3+1] = 0.8;
+            col[i*3+2] = 0.3;
+        }
     }
 
-    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-
-    const mat = new THREE.PointsMaterial({
-        map: particleTexture,
-        color: 0xffffff,
-        size: 2.5,
-        transparent: true,
-        depthWrite: false
-    });
-
-    snow = new THREE.Points(geo, mat);
-    scene.add(snow);
-}
-
-// ================================
-// MAGIC GOLD ✨
-// ================================
-function createMagic() {
-    const count = window.innerWidth < 768 ? 800 : 1600;
     const geo = new THREE.BufferGeometry();
-    const pos = [];
-
-    for (let i = 0; i < count; i++) {
-        pos.push(
-            (Math.random() - 0.5) * 60,
-            (Math.random() - 0.5) * 60,
-            (Math.random() - 0.5) * 60
-        );
-    }
-
-    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
 
     const mat = new THREE.PointsMaterial({
-        map: particleTexture,
-        color: 0xffd700,
-        size: 3.5,
+        size: 3,
+        map: createCircleTexture(),
         transparent: true,
+        vertexColors: true,
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
 
-    magic = new THREE.Points(geo, mat);
-    scene.add(magic);
+    const p = new THREE.Points(geo, mat);
+    scene.add(p);
+    return p;
 }
 
-// ================================
-// ANIMATE
-// ================================
+/* ====== TUYẾT RƠI ====== */
+function createSnow() {
+    const count = 1500;
+    const pos = new Float32Array(count * 3);
+
+    for (let i=0;i<count;i++) {
+        pos[i*3] = (Math.random()-0.5)*300;
+        pos[i*3+1] = Math.random()*200;
+        pos[i*3+2] = (Math.random()-0.5)*300;
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos,3));
+
+    const mat = new THREE.PointsMaterial({
+        size: 2,
+        map: createCircleTexture(),
+        transparent: true,
+        opacity: 0.8
+    });
+
+    const s = new THREE.Points(geo, mat);
+    scene.add(s);
+    return s;
+}
+
+/* ====== ANIMATE ====== */
 function animate() {
     requestAnimationFrame(animate);
 
-    // Snow fall
-    const sPos = snow.geometry.attributes.position.array;
-    for (let i = 1; i < sPos.length; i += 3) {
-        sPos[i] -= 0.4;
-        if (sPos[i] < -150) sPos[i] = 150;
+    tree.rotation.y += 0.002;
+
+    const p = snow.geometry.attributes.position.array;
+    for (let i=0;i<p.length;i+=3) {
+        p[i+1] -= 0.5;
+        if (p[i+1] < -100) p[i+1] = 100;
     }
     snow.geometry.attributes.position.needsUpdate = true;
-
-    // Magic rotate
-    magic.rotation.y += 0.002;
-    magic.rotation.x += 0.0015;
 
     renderer.render(scene, camera);
 }
 
-// ================================
-// START
-// ================================
-document.getElementById("startBtn").onclick = () => {
-    if (started) return;
-    started = true;
-    document.getElementById("startBtn").remove();
-    document.getElementById("hint").remove();
-    init();
-};
-
-// ================================
-// RESIZE
-// ================================
-window.addEventListener("resize", () => {
-    if (!camera) return;
-    camera.aspect = window.innerWidth / window.innerHeight;
+/* ====== RESIZE ====== */
+window.addEventListener("resize", ()=>{
+    width = window.innerWidth;
+    height = window.innerHeight;
+    camera.aspect = width/height;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(width,height);
 });
-</script>
 
+init();
+</script>
 </body>
 </html>
