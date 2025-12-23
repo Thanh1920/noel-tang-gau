@@ -1,167 +1,215 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>🎄 Quà Noel 🎁</title>
+<title>🎄 Merry Christmas 🎁</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{overflow:hidden;background:black;font-family:"Segoe UI",sans-serif}
-#snow{position:fixed;inset:0;pointer-events:none;z-index:9999}
-#scene{width:100vw;height:100vh}
-#ui{
-    position:absolute;bottom:30px;width:100%;
-    text-align:center;z-index:10
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: black;
+    touch-action: none;
+    font-family: 'Segoe UI', sans-serif;
 }
-#ui p{color:rgba(255,255,255,.8);margin-bottom:15px}
-#ui button{
-    padding:14px 40px;border-radius:30px;
-    border:2px solid gold;
-    background:linear-gradient(#d32f2f,#8b0000);
-    color:white;font-size:16px;font-weight:bold;
-    cursor:pointer;animation:pulse 1.5s infinite
+
+#startBtn {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 16px 50px;
+    border-radius: 40px;
+    border: 2px solid gold;
+    background: linear-gradient(#c62828, #8b0000);
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    animation: pulse 1.5s infinite;
+    z-index: 10;
 }
-@keyframes pulse{
-    0%{transform:scale(1)}
-    50%{transform:scale(1.05)}
-    100%{transform:scale(1)}
+
+@keyframes pulse {
+    0% { transform: translateX(-50%) scale(1); }
+    50% { transform: translateX(-50%) scale(1.08); }
+    100% { transform: translateX(-50%) scale(1); }
+}
+
+#hint {
+    position: absolute;
+    bottom: 95px;
+    width: 100%;
+    text-align: center;
+    color: rgba(255,255,255,0.7);
+    font-size: 13px;
 }
 </style>
 </head>
 
 <body>
 
-<canvas id="snow"></canvas>
-<div id="scene"></div>
-
-<div id="ui">
-    <p>🎁 Bấm để mở món quà Noel 🎄</p>
-    <button id="startBtn">MỞ QUÀ</button>
-</div>
-
-<audio id="music" src="giang_sinh_an_lanh/audio.mp3" loop></audio>
+<div id="hint">❄️ Chạm để bắt đầu món quà Noel ❄️</div>
+<button id="startBtn">START MAGIC 🎄</button>
 
 <script>
-/* ========= SNOW ========= */
-const snow=document.getElementById("snow");
-const sctx=snow.getContext("2d");
-let sw,sh,flakes=[];
-function resizeSnow(){
-    sw=snow.width=innerWidth;
-    sh=snow.height=innerHeight;
+// ================================
+// GLOBAL
+// ================================
+let scene, camera, renderer;
+let snow, magic;
+let started = false;
+
+// ================================
+// PARTICLE TEXTURE (TRÒN - MỊN)
+// ================================
+function createParticleTexture() {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 64;
+    const ctx = canvas.getContext("2d");
+
+    const g = ctx.createRadialGradient(32,32,0,32,32,32);
+    g.addColorStop(0,"rgba(255,255,255,1)");
+    g.addColorStop(0.4,"rgba(255,255,255,0.8)");
+    g.addColorStop(1,"rgba(255,255,255,0)");
+
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,64,64);
+
+    return new THREE.CanvasTexture(canvas);
 }
-window.addEventListener("resize",resizeSnow);
-resizeSnow();
-function createSnow(){
-    flakes=[];
-    let count=innerWidth<600?50:120;
-    for(let i=0;i<count;i++){
-        flakes.push({
-            x:Math.random()*sw,
-            y:Math.random()*sh,
-            r:Math.random()*2+1,
-            v:Math.random()*1+0.5
-        });
-    }
-}
-createSnow();
-function snowLoop(){
-    sctx.clearRect(0,0,sw,sh);
-    sctx.fillStyle="white";
-    flakes.forEach(f=>{
-        sctx.beginPath();
-        sctx.arc(f.x,f.y,f.r,0,Math.PI*2);
-        sctx.fill();
-        f.y+=f.v;
-        if(f.y>sh){f.y=-5;f.x=Math.random()*sw}
-    });
-    requestAnimationFrame(snowLoop);
-}
-snowLoop();
 
-/* ========= THREE JS ========= */
-let scene,camera,renderer;
-let photoMeshes=[];
-const loader=new THREE.TextureLoader();
-const photoTextures=[
-    loader.load("giang_sinh_an_lanh/image1.jpg"),
-    loader.load("giang_sinh_an_lanh/image2.jpg"),
-    loader.load("giang_sinh_an_lanh/image3.jpg"),
-    loader.load("giang_sinh_an_lanh/image4.jpg"),
-    loader.load("giang_sinh_an_lanh/image5.jpg")
-];
+const particleTexture = createParticleTexture();
 
-function startMagic(){
-    scene=new THREE.Scene();
-    camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,1000);
-    camera.position.z=80;
+// ================================
+// INIT
+// ================================
+function init() {
+    scene = new THREE.Scene();
 
-    renderer=new THREE.WebGLRenderer({antialias:true});
-    renderer.setSize(innerWidth,innerHeight);
-    document.getElementById("scene").appendChild(renderer.domElement);
+    camera = new THREE.PerspectiveCamera(
+        65,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+    );
+    camera.position.z = 120;
 
-    // ✨ Particles nền
-    const geo=new THREE.BufferGeometry();
-    const count=innerWidth<600?900:2200;
-    const pos=[];
-    for(let i=0;i<count;i++){
-        pos.push(
-            (Math.random()-0.5)*60,
-            (Math.random()-0.5)*80,
-            (Math.random()-0.5)*60
-        );
-    }
-    geo.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
-    const mat=new THREE.PointsMaterial({
-        color:0xffd700,size:1.8,transparent:true,
-        blending:THREE.AdditiveBlending
-    });
-    scene.add(new THREE.Points(geo,mat));
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
 
-    // 🖼️ Ảnh Noel
-    photoTextures.forEach((tex,i)=>{
-        const geo=new THREE.PlaneGeometry(14,14);
-        const mat=new THREE.MeshBasicMaterial({map:tex,transparent:true});
-        const mesh=new THREE.Mesh(geo,mat);
-
-        const angle=i*(Math.PI*2/photoTextures.length);
-        mesh.position.set(
-            Math.sin(angle)*25,
-            Math.cos(angle)*10,
-            Math.cos(angle)*25
-        );
-        scene.add(mesh);
-        photoMeshes.push(mesh);
-    });
-
+    createSnow();
+    createMagic();
     animate();
 }
 
-function animate(){
-    photoMeshes.forEach((m,i)=>{
-        m.rotation.y+=0.01;
-        m.position.y=Math.sin(Date.now()*0.001+i)*5;
-        m.lookAt(camera.position);
+// ================================
+// SNOW ❄️
+// ================================
+function createSnow() {
+    const count = window.innerWidth < 768 ? 1200 : 2500;
+    const geo = new THREE.BufferGeometry();
+    const pos = [];
+
+    for (let i = 0; i < count; i++) {
+        pos.push(
+            (Math.random() - 0.5) * 400,
+            Math.random() * 300,
+            (Math.random() - 0.5) * 400
+        );
+    }
+
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+
+    const mat = new THREE.PointsMaterial({
+        map: particleTexture,
+        color: 0xffffff,
+        size: 2.5,
+        transparent: true,
+        depthWrite: false
     });
-    renderer.render(scene,camera);
-    requestAnimationFrame(animate);
+
+    snow = new THREE.Points(geo, mat);
+    scene.add(snow);
 }
 
-document.getElementById("startBtn").onclick=()=>{
-    document.getElementById("ui").style.display="none";
-    document.getElementById("music").play().catch(()=>{});
-    startMagic();
+// ================================
+// MAGIC GOLD ✨
+// ================================
+function createMagic() {
+    const count = window.innerWidth < 768 ? 800 : 1600;
+    const geo = new THREE.BufferGeometry();
+    const pos = [];
+
+    for (let i = 0; i < count; i++) {
+        pos.push(
+            (Math.random() - 0.5) * 60,
+            (Math.random() - 0.5) * 60,
+            (Math.random() - 0.5) * 60
+        );
+    }
+
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+
+    const mat = new THREE.PointsMaterial({
+        map: particleTexture,
+        color: 0xffd700,
+        size: 3.5,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+
+    magic = new THREE.Points(geo, mat);
+    scene.add(magic);
+}
+
+// ================================
+// ANIMATE
+// ================================
+function animate() {
+    requestAnimationFrame(animate);
+
+    // Snow fall
+    const sPos = snow.geometry.attributes.position.array;
+    for (let i = 1; i < sPos.length; i += 3) {
+        sPos[i] -= 0.4;
+        if (sPos[i] < -150) sPos[i] = 150;
+    }
+    snow.geometry.attributes.position.needsUpdate = true;
+
+    // Magic rotate
+    magic.rotation.y += 0.002;
+    magic.rotation.x += 0.0015;
+
+    renderer.render(scene, camera);
+}
+
+// ================================
+// START
+// ================================
+document.getElementById("startBtn").onclick = () => {
+    if (started) return;
+    started = true;
+    document.getElementById("startBtn").remove();
+    document.getElementById("hint").remove();
+    init();
 };
 
-window.addEventListener("resize",()=>{
-    if(camera){
-        camera.aspect=innerWidth/innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(innerWidth,innerHeight);
-    }
+// ================================
+// RESIZE
+// ================================
+window.addEventListener("resize", () => {
+    if (!camera) return;
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
 });
 </script>
 
